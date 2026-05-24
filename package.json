@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "dotenv": "^17.4.2",
+    "node-html-parser": "^7.1.0",
     "rss-parser": "^3.13.0"
   }
 }

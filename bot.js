@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const fs = require('fs');
 const Parser = require('rss-parser');
+const { parse } = require('node-html-parser');
 const parser = new Parser();
 
 const RSS_URL = process.env.RSS_URL;
@@ -14,7 +15,8 @@ if (!RSS_URL || !WEBHOOK_URL) {
 
 let fetchFn = global.fetch;
 if (!fetchFn) {
-    fetchFn = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+    fetchFn = (...args) =>
+        import('node-fetch').then(({ default: fetch }) => fetch(...args));
 }
 
 let seen = new Set();
@@ -32,10 +34,10 @@ let firstRun = true;
 
 async function checkFeed() {
     try {
-        console.log("Checando feed...");
+        console.log('Checando feed...');
 
         const feed = await parser.parseURL(RSS_URL);
-        console.log("Itens encontrados:", feed.items.length);
+        console.log('Itens encontrados:', feed.items.length);
 
         let hasNew = false;
 
@@ -53,24 +55,66 @@ async function checkFeed() {
                     seen = new Set([...seen].slice(-50));
                 }
 
+                const root = parse(item.description);
+                const games = root.querySelectorAll(
+                    'div[style="margin-bottom:30px"]',
+                );
+
+                const fields = games.map((game) => {
+                    const name =
+                        game.querySelector('a[href*="/game/"]')?.text?.trim() ??
+                        'Desconhecido';
+                    const price =
+                        game
+                            .querySelector('a[href*="itad.link"]')
+                            ?.text?.trim() ?? '?';
+                    const discount =
+                        game
+                            .querySelector('span[style*="text-align:right"]')
+                            ?.text?.trim() ?? '?';
+                    const store =
+                        game
+                            .querySelector('span[style*="0.8em"]')
+                            ?.text?.trim() ?? '?';
+                    const link =
+                        game
+                            .querySelector('a[href*="/game/"]')
+                            ?.getAttribute('href') ?? item.link;
+
+                    return {
+                        name: `[${name}](${link})`,
+                        value: `${price} **(${discount})** na ${store}`,
+                        inline: false,
+                    };
+                });
+
                 const res = await fetchFn(WEBHOOK_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        content:
-                            `**Promoção na waitlist**\n` +
-                            `${item.title}\n` +
-                            `${item.link}`,
+                        embeds: [
+                            {
+                                title: 'Promoções na waitlist!',
+                                color: 0x1b2838,
+                                fields,
+                                footer: { text: 'IsThereAnyDeal' },
+                                timestamp: new Date().toISOString(),
+                            },
+                        ],
                     }),
                 });
 
                 if (!res.ok) {
-                    console.error('Webhook falhou:', res.status, await res.text());
+                    console.error(
+                        'Webhook falhou:',
+                        res.status,
+                        await res.text(),
+                    );
                 } else {
                     console.log('Enviado:', item.title);
                 }
 
-                await new Promise(r => setTimeout(r, 1000));
+                await new Promise((r) => setTimeout(r, 1000));
             }
         }
 
@@ -79,7 +123,6 @@ async function checkFeed() {
         }
 
         firstRun = false;
-
     } catch (err) {
         console.error('Erro:', err);
     }
