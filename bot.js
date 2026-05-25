@@ -3,7 +3,11 @@ require('dotenv').config();
 const fs = require('fs');
 const Parser = require('rss-parser');
 const { parse } = require('node-html-parser');
-const parser = new Parser();
+const parser = new Parser({
+    customFields: {
+        item: ['description'],
+    },
+});
 
 const RSS_URL = process.env.RSS_URL;
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
@@ -119,7 +123,6 @@ async function checkFeed() {
         if (hasNew) {
             fs.writeFileSync('seen.json', JSON.stringify([...seen]));
         }
-
     } catch (err) {
         console.error('Erro:', err);
     }
