@@ -55,6 +55,11 @@ async function checkFeed() {
                     seen = new Set([...seen].slice(-50));
                 }
 
+                if (!item.description) {
+                    console.warn('Item sem description:', item.title);
+                    continue;
+                }
+
                 const root = parse(item.description);
                 const games = root.querySelectorAll(
                     'div[style="margin-bottom:30px"]',
