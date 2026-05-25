@@ -30,8 +30,6 @@ if (fs.existsSync('seen.json')) {
     }
 }
 
-let firstRun = true;
-
 async function checkFeed() {
     try {
         console.log('Checando feed...');
@@ -42,11 +40,6 @@ async function checkFeed() {
         let hasNew = false;
 
         for (const item of feed.items) {
-            if (firstRun) {
-                seen.add(item.link);
-                continue;
-            }
-
             if (!seen.has(item.link)) {
                 hasNew = true;
                 seen.add(item.link);
@@ -123,11 +116,10 @@ async function checkFeed() {
             }
         }
 
-        if (firstRun || hasNew) {
+        if (hasNew) {
             fs.writeFileSync('seen.json', JSON.stringify([...seen]));
         }
 
-        firstRun = false;
     } catch (err) {
         console.error('Erro:', err);
     }
