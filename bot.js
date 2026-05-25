@@ -74,10 +74,16 @@ async function checkFeed() {
                         game
                             .querySelector('span[style*="text-align:right"]')
                             ?.text?.trim() ?? '?';
+                    const storeSpan = game.querySelector(
+                        'span[style*="0.8em"]',
+                    );
+                    const storeDiv = storeSpan?.parentNode;
                     const store =
-                        game
-                            .querySelector('span[style*="0.8em"]')
-                            ?.text?.trim() ?? '?';
+                        storeDiv?.childNodes
+                            .filter((n) => n.nodeType === 3)
+                            .map((n) => n.text.trim())
+                            .filter(Boolean)
+                            .join('') ?? '?';
                     const link =
                         game
                             .querySelector('a[href*="/game/"]')
