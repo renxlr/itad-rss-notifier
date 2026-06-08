@@ -34,6 +34,28 @@ if (fs.existsSync('seen.json')) {
     }
 }
 
+async function sendWebhook(payload) {
+    let res = await fetchFn(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+
+    if (res.status === 429) {
+        const data = await res.json();
+        const wait = (data.retry_after + 0.5) * 1000;
+        console.warn(`Rate limit, aguardando ${wait}ms...`);
+        await new Promise((r) => setTimeout(r, wait));
+        res = await fetchFn(WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+    }
+
+    return res;
+}
+
 async function checkFeed() {
     try {
         console.log('Checando feed...');
@@ -96,20 +118,16 @@ async function checkFeed() {
                     };
                 });
 
-                const res = await fetchFn(WEBHOOK_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        embeds: [
-                            {
-                                title: 'Promoções na waitlist!',
-                                color: 0x1b2838,
-                                fields,
-                                footer: { text: 'IsThereAnyDeal' },
-                                timestamp: new Date().toISOString(),
-                            },
-                        ],
-                    }),
+                const res = await sendWebhook({
+                    embeds: [
+                        {
+                            title: 'Promoções na waitlist!',
+                            color: 0x1b2838,
+                            fields,
+                            footer: { text: 'IsThereAnyDeal' },
+                            timestamp: new Date().toISOString(),
+                        },
+                    ],
                 });
 
                 if (!res.ok) {
